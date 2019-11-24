@@ -54,7 +54,7 @@ function mousePressed() {
         movingPiece.move(x, y, board);
         whitesMove = !whitesMove;
       }
-      //TODO: Verify that this logic is correct
+      // Done moving
       movingPiece.moving = false; 
     }
     moving = !moving;

@@ -31,7 +31,7 @@ class Piece {
   attackingAllies(x, y, board, canCover = false) {
     const attacking = board.getPieceAt(x, y)
     if (!canCover) {
-      return attacking && attacking.isWhite === this.isWhite
+      return attacking !== null && attacking.isWhite === this.isWhite
     } 
     if (x === this.matrix.x && y === this.matrix.y) return true
     return false
@@ -143,7 +143,7 @@ class King extends Piece {
     if (Math.abs(x - enemyKing.matrix.x) <= 1 && Math.abs(y - enemyKing.matrix.y) <= 1) {
       return false
     }
-    return (this.isInCheck(x, y, board, true).length === 0)
+    return (!this.putsKingInCheck(x, y, board))
   }
 
   hasLegalMoves(board) {
@@ -177,9 +177,6 @@ class Queen extends Piece {
       return false
     }
     if (this.attackingAllies(x, y, board, canCover)) {
-      return false
-    }
-    if (this.putsKingInCheck(x, y, board)) {
       return false
     }
     // Rook and Bishop
@@ -340,14 +337,14 @@ class Pawn extends Piece {
     if (this.attackingAllies(x, y, board, canCover)) {
       return false
     }
-    if (this.putsKingInCheck(x, y, board)) {
-      return false
-    }
     const xDiff = x - this.matrix.x
     const yDiff = y - this.matrix.y
     const pieceAtXY = board.getPieceAt(x, y)
     if ((Math.abs(xDiff) === Math.abs(yDiff)) && ((this.isWhite && yDiff === -1) || (!this.isWhite && yDiff === 1))) {
       if (canCover || pieceAtXY) {
+        if (this.putsKingInCheck(x, y, board)) {
+          return false
+        }
         return true
       }
       if (board.enPassant && board.enPassant.capturingPawns.includes(this)) {
@@ -355,6 +352,9 @@ class Pawn extends Piece {
         const stepY = (this.isWhite) ? -1 : 1 
         if (x === p.matrix.x && y === p.matrix.y + stepY) {
           if (!hypothetical) this.capturingEnPassant = true
+          if (this.putsKingInCheck(x, y, board)) {
+            return false
+          }
           return true
         }
         return false
@@ -368,6 +368,9 @@ class Pawn extends Piece {
       if (pieceAtXY) {
         return false
       }
+      if (this.putsKingInCheck(x, y, board)) {
+        return false
+      }
       return true
     }
     if (this.firstMove && ((this.isWhite && yDiff === -2) || (!this.isWhite && yDiff === 2))) {
@@ -375,15 +378,18 @@ class Pawn extends Piece {
         return false
       }
       if (!hypothetical) board.flagEnPassant(x, y, this)
+      if (this.putsKingInCheck(x, y, board)) {
+        return false
+      }
       return true
     }
     return false
   }
   hasLegalMoves(board) {
     if (this.taken) return false
+    const j = this.isWhite ? -1 : 1
     for (let i = -1; i <= 1; i++) {
-      // j = 1
-      if (this.canMove(this.matrix.x + i, this.matrix.y + 1, board)) {
+      if (this.canMove(this.matrix.x + i, this.matrix.y + j, board)) {
         return true
       }
     }

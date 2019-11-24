@@ -130,7 +130,6 @@ class Board {
           // else 
           // If attacking piece can be captured then not checkmate
           // else if check can be blocked then not checkmate
-          return 1
       } else {
         // Stalemate
         for (let i = 0; i < enemyPieces.length; i++) {

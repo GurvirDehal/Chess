@@ -157,11 +157,6 @@ class King extends Piece {
     }
     return false
   }
-  clone() {
-    const clone = new King(this.matrix.x, this.matrix.y, this.isWhite)
-    clone.taken = this.taken
-    return clone
-  }
 }
 
 class Queen extends Piece {
@@ -197,11 +192,6 @@ class Queen extends Piece {
     }
     return false
   }
-  clone() {
-    const clone = new Queen(this.matrix.x, this.matrix.y, this.isWhite)
-    clone.taken = this.taken
-    return clone
-  }
 }
 
 class Rook extends Piece {
@@ -235,11 +225,6 @@ class Rook extends Piece {
       }
     }
     return false
-  }
-  clone() {
-    const clone = new Rook(this.matrix.x, this.matrix.y, this.isWhite)
-    clone.taken = this.taken
-    return clone
   }
 }
 
@@ -275,11 +260,6 @@ class Bishop extends Piece {
     }
     return false
   }
-  clone() {
-    const clone = new Bishop(this.matrix.x, this.matrix.y, this.isWhite)
-    clone.taken = this.taken
-    return clone
-  }
 }
 
 class Knight extends Piece {
@@ -314,11 +294,6 @@ class Knight extends Piece {
       }
     }
     return false
-  }
-  clone() {
-    const clone = new Knight(this.matrix.x, this.matrix.y, this.isWhite)
-    clone.taken = this.taken
-    return clone
   }
 }
 
@@ -394,10 +369,5 @@ class Pawn extends Piece {
       }
     }
     return false
-  }
-  clone() {
-    const clone = new Pawn(this.matrix.x, this.matrix.y, this.isWhite)
-    clone.taken = this.taken
-    return clone
   }
 }

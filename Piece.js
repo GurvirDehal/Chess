@@ -28,13 +28,9 @@ class Piece {
     return (x >=0 && y >= 0 && x < 8 && y < 8)
   }
 
-  attackingAllies(x, y, board, canCover = false) {
+  attackingAllies(x, y, board) {
     const attacking = board.getPieceAt(x, y)
-    if (!canCover) {
-      return attacking !== null && attacking.isWhite === this.isWhite
-    } 
-    if (x === this.matrix.x && y === this.matrix.y) return true
-    return false
+    return attacking !== null && attacking.isWhite === this.isWhite
   }
 
   putsKingInCheck(x, y, board) {
@@ -44,6 +40,8 @@ class Piece {
       attacking.taken = true
     }
     const temp = this.matrix
+    board.matrix[this.matrix.x][this.matrix.y] = null
+    board.matrix[x][y] = this
     this.matrix = createVector(x, y)
     if (board.kingIsInCheck(this.isWhite).length > 0) {
       retVal = true
@@ -52,6 +50,8 @@ class Piece {
       attacking.taken = false
     }
     this.matrix = temp
+    board.matrix[x][y] = attacking
+    board.matrix[this.matrix.x][this.matrix.y] = this
     return retVal
   }
   
@@ -60,21 +60,36 @@ class Piece {
     if (attacking) {
       attacking.taken = true
     }
-    if (board.enPassant && this.isWhite !== board.enPassant.pawn.isWhite) {
-      if (this.capturingEnPassant) {
-        board.enPassant.pawn.taken = true
+    if (this.letter === 'P' && ((this.isWhite && y === 0) || (!this.isWhite && y === 7))) {
+      this.taken = true
+      // Choose promotion
+      const pieces = this.isWhite ? board.whitePieces : board.blackPieces
+      const promotion = new Queen(x, y, this.isWhite)
+      pieces.push(promotion)
+      board.matrix[x][y] = promotion
+    } else {
+      if (board.enPassant && this.isWhite !== board.enPassant.pawn.isWhite) {
+        if (this.capturingEnPassant) {
+          board.enPassant.pawn.taken = true
+        }
+        board.enPassant = false
+        this.capturingEnPassant = false
       }
-      board.enPassant = false
-      this.capturingEnPassant = false
-    }
-    this.matrix = createVector(x, y)
-    this.pixel = createVector(tileSize * (x + 0.5), tileSize * (y + 0.5))
-    this.firstMove = false
-    if (this.castling) {
-      this.castling.rook.matrix = createVector(x - this.castling.stepX, y)
-      this.castling.rook.pixel = createVector(tileSize * (x - this.castling.stepX + 0.5), tileSize * (y + 0.5))
-      this.castling.rook.firstMove = false
-      this.castling = false
+      board.matrix[this.matrix.x][this.matrix.y] = null
+      board.matrix[x][y] = this
+      this.matrix = createVector(x, y) 
+      this.pixel = createVector(tileSize * (x + 0.5), tileSize * (y + 0.5))
+      this.firstMove = false
+      if (this.castling) {
+        const stepX = this.castling.stepX
+        const rook = this.castling.rook
+        board.matrix[rook.matrix.x][rook.matrix.y] = null
+        board.matrix[x - stepX][y] = rook
+        rook.matrix = createVector(x - stepX, y)
+        rook.pixel = createVector(tileSize * (x - stepX + 0.5), tileSize * (y + 0.5))
+        rook.firstMove = false
+        this.castling = false
+      }
     }
 
     const gameState = board.isGameOver(this.isWhite)
@@ -106,11 +121,11 @@ class King extends Piece {
     this.value = Infinity
     this.castling = false
   }
-  isInCheck(x, y, board, canCover = false) {
+  isInCheck(x, y, board) {
     const enemyPieces = this.isWhite ? board.blackPieces : board.whitePieces
     const checkingPieces = []
     enemyPieces.forEach(piece => {
-      if (!piece.taken && piece.canMove(x, y, board, canCover)) {
+      if (!piece.taken && piece.canMove(x, y, board, { ignoreCheck: true })) {
         // in check
         checkingPieces.push(piece)
       }
@@ -120,7 +135,7 @@ class King extends Piece {
     } 
     return checkingPieces
   }
-  canMove(x, y, board, canCover = false, hypothetical = true) {
+  canMove(x, y, board, opts={}) {
     if (this.taken) return false
     if (!this.withinBounds(x, y)) {
       return false
@@ -166,17 +181,17 @@ class Queen extends Piece {
     this.img = images[isWhite ? 1 : 7]
     this.value = 9
   }
-  canMove(x, y, board, canCover = false, hypothetical = true) {
+  canMove(x, y, board, opts = {}) {
     if (this.taken) return false
     if (!this.withinBounds(x, y)) {
       return false
     }
-    if (this.attackingAllies(x, y, board, canCover)) {
+    if (this.attackingAllies(x, y, board)) {
       return false
     }
     // Rook and Bishop
     if (((Math.abs(this.matrix.x - x) === Math.abs(this.matrix.y - y)) || (this.matrix.x === x || this.matrix.y === y)) && 
-         (!this.moveThroughPieces(x, y, board) && !this.putsKingInCheck(x, y, board))) {
+         (!this.moveThroughPieces(x, y, board) && (opts.ignoreCheck || !this.putsKingInCheck(x, y, board)))) {
         return true
     }
     return false
@@ -201,16 +216,16 @@ class Rook extends Piece {
     this.img = images[isWhite ? 4 : 10]
     this.value = 5
   }
-  canMove(x, y, board, canCover = false, hypothetical = true) {
+  canMove(x, y, board, opts={}) {
     if (this.taken) return false
     if (!this.withinBounds(x, y)) {
       return false
     }
-    if (this.attackingAllies(x, y, board, canCover)) {
+    if (this.attackingAllies(x, y, board)) {
       return false
     }
     // Rook
-    if ((this.matrix.x === x || this.matrix.y === y) && !this.moveThroughPieces(x, y, board) && !this.putsKingInCheck(x, y, board)) {
+    if ((this.matrix.x === x || this.matrix.y === y) && !this.moveThroughPieces(x, y, board) && (opts.ignoreCheck || !this.putsKingInCheck(x, y, board))) {
       return true
     }
     return false
@@ -235,16 +250,16 @@ class Bishop extends Piece {
     this.img = images[isWhite ? 3 : 9]
     this.value = 3
   }
-  canMove(x, y, board, canCover = false, hypothetical = true) {
+  canMove(x, y, board, opts={}) {
     if (this.taken) return false
     if (!this.withinBounds(x, y)) {
       return false
     }
-    if (this.attackingAllies(x, y, board, canCover)) {
+    if (this.attackingAllies(x, y, board)) {
       return false
     }
     // Bishop
-    if ((Math.abs(this.matrix.x - x) === Math.abs(this.matrix.y - y)) && !this.moveThroughPieces(x, y, board) && !this.putsKingInCheck(x, y, board)) {
+    if ((Math.abs(this.matrix.x - x) === Math.abs(this.matrix.y - y)) && !this.moveThroughPieces(x, y, board) && (opts.ignoreCheck || !this.putsKingInCheck(x, y, board))) {
       return true
     }
     return false
@@ -269,17 +284,17 @@ class Knight extends Piece {
     this.img = images[isWhite ? 2 : 8]
     this.value = 3
   }
-  canMove(x, y, board, canCover = false, hypothetical = true) {
+  canMove(x, y, board, opts={}) {
     if (this.taken) return false
     if (!this.withinBounds(x, y)) {
       return false
     }
-    if (this.attackingAllies(x, y, board, canCover)) {
+    if (this.attackingAllies(x, y, board)) {
       return false
     }
     const xDiff = Math.abs(this.matrix.x - x)
     const yDiff = Math.abs(this.matrix.y - y)
-    if ((xDiff === 2 && yDiff === 1 || xDiff === 1 && yDiff === 2) && !this.putsKingInCheck(x, y, board)) {
+    if ((xDiff === 2 && yDiff === 1 || xDiff === 1 && yDiff === 2) && (opts.ignoreCheck || !this.putsKingInCheck(x, y, board))) {
       return true
     }
     return false
@@ -305,28 +320,25 @@ class Pawn extends Piece {
     this.value = 1
     this.capturingEnPassant = false
   }
-  canMove(x, y, board, canCover = false, hypothetical = true) {
+  canMove(x, y, board, opts={}) {
     if (!this.withinBounds(x, y)) {
       return false
     }
-    if (this.attackingAllies(x, y, board, canCover)) {
+    if (this.attackingAllies(x, y, board)) {
       return false
     }
     const xDiff = x - this.matrix.x
     const yDiff = y - this.matrix.y
     const pieceAtXY = board.getPieceAt(x, y)
     if ((Math.abs(xDiff) === Math.abs(yDiff)) && ((this.isWhite && yDiff === -1) || (!this.isWhite && yDiff === 1))) {
-      if (canCover || pieceAtXY) {
-        if (this.putsKingInCheck(x, y, board)) {
-          return false
-        }
-        return true
+      if (pieceAtXY) {
+        return opts.ignoreCheck || !this.putsKingInCheck(x, y, board)
       }
       if (board.enPassant && board.enPassant.capturingPawns.includes(this)) {
         const p = board.enPassant.pawn
         const stepY = (this.isWhite) ? -1 : 1 
         if (x === p.matrix.x && y === p.matrix.y + stepY) {
-          if (!hypothetical) this.capturingEnPassant = true
+          if (opts.notHypothetical) this.capturingEnPassant = true
           if (this.putsKingInCheck(x, y, board)) {
             return false
           }
@@ -349,10 +361,10 @@ class Pawn extends Piece {
       return true
     }
     if (this.firstMove && ((this.isWhite && yDiff === -2) || (!this.isWhite && yDiff === 2))) {
-      if (this.moveThroughPieces(x, y, board)) {
+      if (pieceAtXY || this.moveThroughPieces(x, y, board)) {
         return false
       }
-      if (!hypothetical) board.flagEnPassant(x, y, this)
+      if (opts.notHypothetical) board.flagEnPassant(x, y, this)
       if (this.putsKingInCheck(x, y, board)) {
         return false
       }

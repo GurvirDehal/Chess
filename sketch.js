@@ -50,7 +50,7 @@ function mousePressed() {
       }
     } else {
       // Moving is true
-      if (movingPiece.canMove(x, y, board, false, false)) {
+      if (movingPiece.canMove(x, y, board, { notHypothetical: true })) {
         movingPiece.move(x, y, board);
         whitesMove = !whitesMove;
       }

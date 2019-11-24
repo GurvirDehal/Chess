@@ -3,40 +3,49 @@ class Board {
     this.whitePieces = []
     this.blackPieces = []
     this.score = 0
+    this.matrix = []
+    this.setupMatrix()
     this.setupPieces(true)
     this.setupPieces(false)
     this.enPassant = false
   }
-
+  setupMatrix() {
+    this.matrix = new Array(8)
+    for (let i = 0; i < 8; i++) {
+      this.matrix[i] = new Array(8)
+      for (let j = 0; j < 8; j++) {
+        this.matrix[i][j] = null
+      }
+    }
+  }
   setupPieces(isWhite) {
     const pieces = isWhite ? this.whitePieces : this.blackPieces
     const rank = isWhite ? 7 : 0
     const pawnRank = isWhite ? 6 : 1
     const pieceTypes = [Rook, Knight, Bishop, Queen, King, Bishop, Knight, Rook]
     pieceTypes.forEach((Piece, file) => {
-      pieces.push(new Piece(file, rank, isWhite))
+      const piece = new Piece(file, rank, isWhite)
+      pieces.push(piece)
+      this.matrix[file][rank] = piece
     })
     for (let file = 0; file < 8; file++) {
-      pieces.push(new Pawn(file, pawnRank, isWhite))
+      const pawn = new Pawn(file, pawnRank, isWhite)
+      pieces.push(pawn)
+      this.matrix[file][pawnRank] = pawn
     }
   }
 
   show() {
-    for (let i = 0; i < this.whitePieces.length; i++) {
-      this.whitePieces[i].show()
-      this.blackPieces[i].show()
-    }
+    this.whitePieces.forEach(piece => {
+      piece.show()
+    })
+    this.blackPieces.forEach(piece => {
+      piece.show()
+    })
   }
   getPieceAt(x, y) {
-    for(const piece of this.whitePieces) {
-      if (!piece.taken && piece.matrix.x === x && piece.matrix.y === y) {
-        return piece
-      }
-    }
-    for(const piece of this.blackPieces) {
-      if (!piece.taken && piece.matrix.x === x && piece.matrix.y === y) {
-        return piece
-      }
+    if (x >= 0 && y >=0 && x < 8 && y < 8) {
+      return this.matrix[x][y]
     }
     return null
   } 
